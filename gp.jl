@@ -152,13 +152,13 @@ function log_lik!(gp::GP, hypers::Vector, grad::Vector)
     return ll
 end
 
-function log_lik_optim!(gp::GP)
+function log_lik_optim!(gp::GP, lbounds, ubounds; iterations=20, ftol_rel=1e-2)
     f(hypers,g) = log_lik!(gp,hypers,g)
-    opt = Opt(:LN_BOBYQA, length(gp.θ)+1)
+    opt = Opt(:LN_BOBYQA, length(gp.ν)+length(gp.θ))
     max_objective!(opt, f)
-    lower_bounds!(opt, [1e-4, 0.1])
-    upper_bounds!(opt, [10.0, 100.0])
-    ftol_rel!(opt, 1e-2)
-    maxeval!(opt, 20)
-    (maxf,maxx,ret) = optimize(opt, [gp.ν, gp.θ])
+    lower_bounds!(opt, lbounds)
+    upper_bounds!(opt, ubounds)
+    ftol_rel!(opt, ftol_rel)
+    maxeval!(opt, iterations)
+    (maxf, maxx, ret) = optimize(opt, [gp.ν, gp.θ])
 end
