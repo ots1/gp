@@ -25,5 +25,5 @@ for i=1:size(Xout,1)
     end
 end
 
-writedlm(result, "predicted-value2")
+writedlm("predicted-value2", result)
 
