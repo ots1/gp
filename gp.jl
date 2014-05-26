@@ -4,7 +4,7 @@ using NLopt
 # assign in place
 function (.=){T}(a::T, b::T)
     for f in names(a)
-        setfield(a, f, getfield(b, f))
+        setfield!(a, f, getfield(b, f))
     end
 end
 
@@ -71,8 +71,8 @@ function DenseGP(cf::Cov, ν::Float64, θ::Vector{Float64}, xs::Vector, ts::Vect
 end
 
 function set_hyperparameters!(gp::DenseGP, hypers::Vector{Float64})
-    if (gp.ν != hypers[1]) || (gp.θ != hypers[2:])
-        gp .= DenseGP(gp.cf, hypers[1], hypers[2:], gp.xs, gp.ts, gp.Ts)
+    if (gp.ν != hypers[1]) || (gp.θ != hypers[2:end])
+        gp .= DenseGP(gp.cf, hypers[1], hypers[2:end], gp.xs, gp.ts, gp.Ts)
     end
 end
 
@@ -110,7 +110,9 @@ function SparseGP(m::Int, cf::Cov, ν::Float64, θ::Vector{Float64}, xs::Vector,
     n = length(Ts)
     noise = zeros(n,m)
     noise[1:m,:] = diagm([(T == Val())?ν:1e-6 for T=Ts[1:m]])
-    Knm = [cov(cf, T1, T2, x1, x2, θ) for (T1,x1)=zip(Ts,xs), (T2,x2)=zip(Ts[1:m],xs[1:m])] + 1e-10 * eye(n)[:,1:m]
+    stab = zeros(n,m)
+    stab[1:m,:] = 1e-10 * eye(m)
+    Knm = [cov(cf, T1, T2, x1, x2, θ) for (T1,x1)=zip(Ts,xs), (T2,x2)=zip(Ts[1:m],xs[1:m])] + stab
     Kmn = Knm'
     Kmm = Knm[1:m,:]
     Kmn_ts = Kmn * ts
@@ -122,8 +124,8 @@ function SparseGP(m::Int, cf::Cov, ν::Float64, θ::Vector{Float64}, xs::Vector,
 end
 
 function set_hyperparameters!(gp::SparseGP, hypers::Vector{Float64})
-    if (gp.ν != hypers[1]) || (gp.θ != hypers[2:])
-        gp .= SparseGP(gp.m, gp.cf, hypers[1], hypers[2:], gp.xs, gp.ts, gp.Ts)
+    if (gp.ν != hypers[1]) || (gp.θ != hypers[2:end])
+        gp .= SparseGP(gp.m, gp.cf, hypers[1], hypers[2:end], gp.xs, gp.ts, gp.Ts)
     end
 end
 
@@ -147,7 +149,7 @@ function log_lik!(gp::GP, hypers::Vector, grad::Vector)
     ll = log_lik(gp)
     
     strify(vec) = chomp(string(vec'))
-    print("log_lik! : ν=$(hypers[1])\t θ=[$(strify(hypers[2:]))]\t log(likelihood)=$ll\n")
+    print("log_lik! : ν=$(hypers[1])\t θ=$(strify(hypers[2:end]))\t log(likelihood)=$ll\n")
 
     return ll
 end
